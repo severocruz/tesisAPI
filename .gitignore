@@ -20,3 +20,45 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+
+# Entorno virtual
+venv/
+env/
+.venv/
+.env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos de configuración locales
+*.env
+*.ini
+*.log
+*.sqlite3
+
+# Dependencias
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+
+# IDEs y editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# FastAPI / Uvicorn
+*.pid
+*.sock
+
+# pytest
+.pytest_cache/
+coverage.xml
+htmlcov/
