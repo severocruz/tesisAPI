@@ -1,20 +1,36 @@
 from typing import Union
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi import File, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import numpy as np
 import joblib
-# from pyAudioAnalysis import audioFeatureExtraction as aF
-from pyAudioAnalysis import ShortTermFeatures as aF 
-#from pyAudioAnalysis.audioFeatureExtraction import stFeatureExtraction as aF
+from pyAudioAnalysis import ShortTermFeatures
 from scipy.io import wavfile
 import os
+from sqlmodel import create_engine, Field, Session, SQLModel, select
+from sqlalchemy.orm import Session
+from database import SessionLocal, engine
+from crud.generosmusicales import get_all as get_all_generos, create as create_genero
+from schemas.generosmusicales import GenerosMusicalesCreate, GenerosMusicalesOut
+import models as models
 
 # Cargar modelo y umbrales
 clf = joblib.load("modelo_svm.pkl")
 optimal_thresholds = joblib.load("umbrales.pkl")
 labels = list(optimal_thresholds.keys())
+
+
+# url_connection = "mysql+pymysql://root:12345@localhost:3306/db_autoctono"
+# engine = create_engine(url_connection)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 # creacion de una app de FastAPI
 app = FastAPI(title="API de reconocimiento de generos musicales autoctonos")
 
@@ -30,7 +46,7 @@ def extraer_8_features(wav_path):
         x = x.astype(np.float32)
         x /= np.max(np.abs(x))  # normalizar
     
-    features, _ = aF.stFeatureExtraction(x, Fs, 0.1*Fs, 0.05*Fs)
+    features, _ = ShortTermFeatures.feature_extraction(x, Fs, 0.1*Fs, 0.05*Fs)
     
     features_mean = np.mean(features, axis=1)
     
@@ -50,8 +66,17 @@ async def predict_audio(file: UploadFile = File(...)):
         # Probabilidades
         y_score = clf.predict_proba(X_new)
         
+        optimal_thresholds2 = {
+            "atiku": 0.90,
+            "jula": 0.95,
+            "kantus": 0.70,
+            "macheteros": 0.70,
+            "pujllay": 0.90
+        }
+
+        labels = list(optimal_thresholds.keys())
         # Predicción con umbrales
-        candidatos = [labels[i] for i, s in enumerate(y_score[0]) if s >= optimal_thresholds[labels[i]]]
+        candidatos = [labels[i] for i, s in enumerate(y_score[0]) if s >= optimal_thresholds2[labels[i]]]
         if candidatos:
             prediccion = candidatos[np.argmax([y_score[0][labels.index(c)] for c in candidatos])]
         else:
@@ -91,3 +116,10 @@ def read_root():
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
+
+# Endpoint para listar todos los géneros
+@app.get("/generos/", response_model=list[GenerosMusicalesOut])
+def listar_generos(db: Session = Depends(get_db)):
+    return get_all_generos(db)
+
+
