@@ -17,5 +17,6 @@ class GenerosMusicalesCreate(GenerosMusicalesBase):
 class GenerosMusicalesOut(GenerosMusicalesBase):
     id: int
 
-
+    model_config = {"from_attributes": True}
+    
 model_config = ConfigDict(from_attributes=True)

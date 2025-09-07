@@ -13,6 +13,10 @@ from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 from crud.generosmusicales import get_all as get_all_generos, create as create_genero
 from schemas.generosmusicales import GenerosMusicalesCreate, GenerosMusicalesOut
+# from crud.generosmusicales import get_by_nombre_prediccion
+from fastapi import HTTPException
+from schemas.generosmusicales import GenerosMusicalesOut
+from crud.generosmusicales import get_by_nombre_prediccion
 import models as models
 
 # Cargar modelo y umbrales
@@ -53,8 +57,52 @@ def extraer_8_features(wav_path):
     # Tomar solo las primeras 8 características
     return features_mean[:8]
 
-@app.post("/predict_audio")
-async def predict_audio(file: UploadFile = File(...)):
+# @app.post("/predict_audio")
+# async def predict_audio(file: UploadFile = File(...), db: Session = Depends(get_db)):
+#     tmp_path = f"temp_{file.filename}"
+#     with open(tmp_path, "wb") as f:
+#         f.write(await file.read())
+    
+#     try:
+#         # Extraer features reducidas
+#         X_new = extraer_8_features(tmp_path).reshape(1, -1)  # 1 muestra
+        
+#         # Probabilidades
+#         y_score = clf.predict_proba(X_new)
+        
+#         optimal_thresholds2 = {
+#             "atiku": 0.90,
+#             "jula": 0.95,
+#             "kantus": 0.70,
+#             "macheteros": 0.70,
+#             "pujllay": 0.90
+#         }
+
+#         labels = list(optimal_thresholds.keys())
+#         # Predicción con umbrales
+#         candidatos = [labels[i] for i, s in enumerate(y_score[0]) if s >= optimal_thresholds2[labels[i]]]
+#         if candidatos:
+#             nombre_prediccion = candidatos[np.argmax([y_score[0][labels.index(c)] for c in candidatos])]
+#             resultado = get_by_nombre_prediccion(db, nombre_prediccion)
+#             # resultado = nombre_prediccion
+
+#             if resultado:
+#                 prediccion = GenerosMusicalesOut.from_orm(resultado)
+#             else:
+#                 prediccion = "Género no visto"
+#         else:
+#             prediccion = "Género no visto"
+        
+#         return JSONResponse(content={"prediccion": prediccion})
+    
+#     except Exception as e:
+#         return JSONResponse(content={"error": str(e)}, status_code=500)
+    
+#     finally:
+#         os.remove(tmp_path)
+
+@app.post("/predict_audio", response_model=GenerosMusicalesOut)
+async def predict_audio(file: UploadFile = File(...), db: Session = Depends(get_db)):
     tmp_path = f"temp_{file.filename}"
     with open(tmp_path, "wb") as f:
         f.write(await file.read())
@@ -67,25 +115,34 @@ async def predict_audio(file: UploadFile = File(...)):
         y_score = clf.predict_proba(X_new)
         
         optimal_thresholds2 = {
-            "atiku": 0.90,
-            "jula": 0.95,
-            "kantus": 0.70,
-            "macheteros": 0.70,
-            "pujllay": 0.90
+            "atiku": 0.61,
+            "jula": 0.47,
+            "kantus": 0.44,
+            "macheteros": 0.61,
+            "pujllay": 0.79
+            # "atiku": 0.87,
+            # "jula": 0.74,
+            # "kantus": 0.74,
+            # "macheteros": 0.69,
+            # "pujllay": 0.95
         }
 
-        labels = list(optimal_thresholds.keys())
+        labels = list(optimal_thresholds2.keys())
+
         # Predicción con umbrales
         candidatos = [labels[i] for i, s in enumerate(y_score[0]) if s >= optimal_thresholds2[labels[i]]]
         if candidatos:
             prediccion = candidatos[np.argmax([y_score[0][labels.index(c)] for c in candidatos])]
+            resultado = get_by_nombre_prediccion(db, prediccion)
+            if resultado:
+                return resultado  #FastAPI lo convierte automáticamente a JSON
+            else:
+                raise HTTPException(status_code=404, detail="Género no visto")
         else:
-            prediccion = "Género no visto"
-        
-        return JSONResponse(content={"prediccion": prediccion})
+            raise HTTPException(status_code=404, detail="Género no visto")
     
     except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        raise HTTPException(status_code=500, detail=str(e))
     
     finally:
         os.remove(tmp_path)
@@ -121,5 +178,14 @@ def read_item(item_id: int, q: Union[str, None] = None):
 @app.get("/generos/", response_model=list[GenerosMusicalesOut])
 def listar_generos(db: Session = Depends(get_db)):
     return get_all_generos(db)
+
+# Endpoint para obtener un género por ID
+@app.get("/generos/{genero_id}", response_model=GenerosMusicalesOut)
+def obtener_genero(genero_id: int, db: Session = Depends(get_db)):
+    genero = db.get(models.GenerosMusicales, genero_id)
+    if not genero:
+        raise HTTPException(status_code=404, detail="Género no encontrado")
+    return genero
+
 
 

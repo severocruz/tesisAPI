@@ -9,6 +9,10 @@ def get_all(db: Session) -> list[GenerosMusicalesOut]:
 def get_by_id(db: Session, id: int) -> GenerosMusicalesOut | None:
     return db.query(GenerosMusicales).filter(GenerosMusicales.id == id).first()
 
+def get_by_nombre_prediccion(db: Session, nombre_prediccion: str) -> GenerosMusicalesOut | None:
+    return db.query(GenerosMusicales).filter(GenerosMusicales.nombre_prediccion == nombre_prediccion).first()
+
+
 def create(db: Session, item: GenerosMusicalesCreate) -> GenerosMusicalesOut:
     db_item = GenerosMusicales(**item.dict())
     db.add(db_item)
