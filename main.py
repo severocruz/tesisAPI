@@ -18,6 +18,8 @@ from fastapi import HTTPException
 from schemas.generosmusicales import GenerosMusicalesOut
 from crud.generosmusicales import get_by_nombre_prediccion
 import models as models
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 # Cargar modelo y umbrales
 clf = joblib.load("modelo_svm.pkl")
@@ -38,6 +40,8 @@ def get_db():
 # creacion de una app de FastAPI
 app = FastAPI(title="API de reconocimiento de generos musicales autoctonos")
 
+# Montar carpeta "static"
+app.mount("/static", StaticFiles(directory="static"), name="static")
 # Definir esquema de entrada (features preprocesadas)
 class AudioFeatures(BaseModel):
     X_new: list  # lista de listas [[feat1, feat2, ...], ...]
@@ -163,6 +167,9 @@ def predecir(audio: AudioFeatures):
     
     return {"predicciones": predicciones}
 
+@app.get("/imagen/{image_name}")
+async def get_image(image_name: str):
+    return FileResponse("static/"+image_name, media_type="image/png")
 
 # definicion de una ruta raiz
 @app.get("/")
