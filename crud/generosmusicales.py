@@ -19,3 +19,4 @@ def create(db: Session, item: GenerosMusicalesCreate) -> GenerosMusicalesOut:
     db.commit()
     db.refresh(db_item)
     return db_item
+

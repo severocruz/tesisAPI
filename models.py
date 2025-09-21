@@ -2,7 +2,7 @@ from typing import Optional
 import datetime
 import decimal
 
-from sqlalchemy import DECIMAL, ForeignKeyConstraint, Index, Integer, String, TIMESTAMP, Text, text
+from sqlalchemy import DECIMAL, ForeignKeyConstraint, Index, Integer, Float, String, TIMESTAMP, Text, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
@@ -18,9 +18,10 @@ class GenerosMusicales(Base):
     descripcion: Mapped[Optional[str]] = mapped_column(Text)
     imagen: Mapped[Optional[str]] = mapped_column(String(500))
     video_link: Mapped[Optional[str]] = mapped_column(String(500))
+    # porcentaje: Mapped[Optional[float]] = mapped_column(float)
+    porcentaje: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     created_at: Mapped[Optional[datetime.datetime]] = mapped_column(TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(TIMESTAMP, server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
-
     caracteristicas_culturales: Mapped[list['CaracteristicasCulturales']] = relationship('CaracteristicasCulturales', back_populates='generos_musicales')
     instrumentos: Mapped[list['Instrumentos']] = relationship('Instrumentos', back_populates='generos_musicales')
     origenes_geograficos: Mapped[list['OrigenesGeograficos']] = relationship('OrigenesGeograficos', back_populates='generos_musicales')

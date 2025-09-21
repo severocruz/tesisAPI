@@ -18,3 +18,8 @@ def create(db: Session, item: InstrumentosCreate) -> InstrumentosOut:
 
 def get_by_id_genero(db: Session, id_genero: int) -> list[InstrumentosOut]:
     return db.query(Instrumentos).filter(Instrumentos.id_genero == id_genero).all()
+
+def get_instrumentos_by_genero(db: Session, genero_id: int):
+    return db.query(Instrumentos).filter(
+        Instrumentos.id_genero == genero_id
+    ).all()

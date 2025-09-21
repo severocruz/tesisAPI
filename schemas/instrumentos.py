@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from pydantic import ConfigDict
+from datetime import datetime
 
 class InstrumentosBase(BaseModel):
     nombre: str
@@ -7,8 +8,8 @@ class InstrumentosBase(BaseModel):
     descripcion: str
     imagen: str
     id_genero: int
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 class InstrumentosCreate(InstrumentosBase):
     pass
@@ -16,4 +17,4 @@ class InstrumentosCreate(InstrumentosBase):
 class InstrumentosOut(InstrumentosBase):
     id: int
 
-model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)

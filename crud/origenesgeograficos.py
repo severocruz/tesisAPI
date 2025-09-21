@@ -18,3 +18,8 @@ def create(db: Session, item: OrigenesGeograficosCreate) -> OrigenesGeograficosO
 
 def get_by_id_genero(db: Session, id_genero: int) -> list[OrigenesGeograficosOut]:
     return db.query(OrigenesGeograficos).filter(OrigenesGeograficos.id_genero == id_genero).all()
+
+def get_origenes_by_genero(db: Session, genero_id: int):
+    return db.query(OrigenesGeograficos).filter(
+        OrigenesGeograficos.id_genero == genero_id
+    ).all()

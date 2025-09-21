@@ -18,3 +18,8 @@ def create(db: Session, item: CaracteristicasCulturalesCreate) -> Caracteristica
 
 def get_by_id_genero(db: Session, id_genero: int) -> list[CaracteristicasCulturalesOut]:
     return db.query(CaracteristicasCulturales).filter(CaracteristicasCulturales.id_genero == id_genero).all()
+
+def get_caracteristicas_by_genero(db: Session, genero_id: int):
+    return db.query(CaracteristicasCulturales).filter(
+        CaracteristicasCulturales.id_genero == genero_id
+    ).all()

@@ -12,14 +12,39 @@ from sqlmodel import create_engine, Field, Session, SQLModel, select
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 from crud.generosmusicales import get_all as get_all_generos, create as create_genero
-from schemas.generosmusicales import GenerosMusicalesCreate, GenerosMusicalesOut
+from crud.caracteristicasculturales import get_caracteristicas_by_genero
+from crud.instrumentos import get_instrumentos_by_genero
+from crud.origenesgeograficos import get_origenes_by_genero
+from schemas.generosmusicales import GenerosMusicalesOut
+from schemas.instrumentos import  InstrumentosOut
+from schemas.origenesgeograficos import OrigenesGeograficosOut
 # from crud.generosmusicales import get_by_nombre_prediccion
 from fastapi import HTTPException
 from schemas.generosmusicales import GenerosMusicalesOut
 from crud.generosmusicales import get_by_nombre_prediccion
+from schemas.caracteristicasculturales import CaracteristicasCulturalesOut
 import models as models
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+import noisereduce as nr
+import soundfile as sf
+
+
+import pydub
+from pydub.utils import which
+
+# Forzar rutas exactas de FFmpeg
+pydub.AudioSegment.converter = r"D:\ffmpeg\bin\ffmpeg.exe"
+pydub.AudioSegment.ffprobe   = r"D:\ffmpeg\bin\ffprobe.exe"
+
+# Verificar que pydub los reconoce
+print("ffmpeg:", which("ffmpeg"))
+print("ffprobe:", which("ffprobe"))
+
+from pydub.silence import detect_nonsilent
+from pydub import AudioSegment, effects
+
+
 
 # Cargar modelo y umbrales
 clf = joblib.load("modelo_svm.pkl")
@@ -61,74 +86,81 @@ def extraer_8_features(wav_path):
     # Tomar solo las primeras 8 características
     return features_mean[:8]
 
-# @app.post("/predict_audio")
-# async def predict_audio(file: UploadFile = File(...), db: Session = Depends(get_db)):
-#     tmp_path = f"temp_{file.filename}"
-#     with open(tmp_path, "wb") as f:
-#         f.write(await file.read())
-    
-#     try:
-#         # Extraer features reducidas
-#         X_new = extraer_8_features(tmp_path).reshape(1, -1)  # 1 muestra
-        
-#         # Probabilidades
-#         y_score = clf.predict_proba(X_new)
-        
-#         optimal_thresholds2 = {
-#             "atiku": 0.90,
-#             "jula": 0.95,
-#             "kantus": 0.70,
-#             "macheteros": 0.70,
-#             "pujllay": 0.90
-#         }
+from pydub import AudioSegment, effects
+from pydub.silence import detect_nonsilent
 
-#         labels = list(optimal_thresholds.keys())
-#         # Predicción con umbrales
-#         candidatos = [labels[i] for i, s in enumerate(y_score[0]) if s >= optimal_thresholds2[labels[i]]]
-#         if candidatos:
-#             nombre_prediccion = candidatos[np.argmax([y_score[0][labels.index(c)] for c in candidatos])]
-#             resultado = get_by_nombre_prediccion(db, nombre_prediccion)
-#             # resultado = nombre_prediccion
+def process_audio(file_path: str, output_path: str):
+    """
+    Normaliza y prepara el audio para el modelo:
+    - Mono
+    - 16-bit PCM
+    - 44.1 kHz
+    - Volumen normalizado
+    - Recorte de silencios al inicio y final
+    """
+    audio = AudioSegment.from_file(file_path)
 
-#             if resultado:
-#                 prediccion = GenerosMusicalesOut.from_orm(resultado)
-#             else:
-#                 prediccion = "Género no visto"
-#         else:
-#             prediccion = "Género no visto"
-        
-#         return JSONResponse(content={"prediccion": prediccion})
+    audio = audio.set_channels(1)
+    audio = audio.set_sample_width(2)  # 16 bits PCM
+    audio = audio.set_frame_rate(44100)
+
+    audio = effects.normalize(audio)
+
+        # Detectar y recortar silencios
+    nonsilent_ranges = detect_nonsilent(audio, min_silence_len=200, silence_thresh=audio.dBFS-16)
     
-#     except Exception as e:
-#         return JSONResponse(content={"error": str(e)}, status_code=500)
+    # nonsilent_ranges = detect_nonsilent(audio, min_silence_len=200, silence_thresh=-40)
     
-#     finally:
-#         os.remove(tmp_path)
+    if nonsilent_ranges:
+        start = nonsilent_ranges[0][0]
+        end = nonsilent_ranges[-1][1]
+        # Deja un pequeño margen
+        audio = audio[max(0, start-200):min(len(audio), end+200)]
+    # === 3. Filtro pasa-altos (100 Hz) ===
+    audio = audio.high_pass_filter(100)
+
+    # === 4. Reducción de ruido (usando noisereduce) ===
+    samples = np.array(audio.get_array_of_samples()).astype(np.float32)
+    samples /= np.max(np.abs(samples))  # normalizar a -1.0 / 1.0
+      # === 5. Reducción de ruido ===
+    reduced_noise = nr.reduce_noise(y=samples, sr=audio.frame_rate, prop_decrease=0.8)
+    # === 6. Normalizar de nuevo antes de guardar ===
+    reduced_noise /= np.max(np.abs(reduced_noise))
+    # === 5. Guardar como WAV limpio ===
+    sf.write(output_path, reduced_noise, audio.frame_rate, subtype="PCM_16")
+    # Exportar en formato compatible
+    # audio.export(output_path, format="wav")
+    
 
 @app.post("/predict_audio", response_model=GenerosMusicalesOut)
 async def predict_audio(file: UploadFile = File(...), db: Session = Depends(get_db)):
     tmp_path = f"temp_{file.filename}"
+    processed_path = f"processed_{file.filename}"
+
     with open(tmp_path, "wb") as f:
         f.write(await file.read())
     
     try:
+
+        # Normalizar y procesar el audio
+        process_audio(tmp_path, processed_path)
         # Extraer features reducidas
         X_new = extraer_8_features(tmp_path).reshape(1, -1)  # 1 muestra
-        
+        # X_new = extraer_8_features(processed_path).reshape(1, -1)
         # Probabilidades
         y_score = clf.predict_proba(X_new)
         
         optimal_thresholds2 = {
-            "atiku": 0.61,
-            "jula": 0.47,
-            "kantus": 0.44,
-            "macheteros": 0.61,
-            "pujllay": 0.79
-            # "atiku": 0.87,
-            # "jula": 0.74,
-            # "kantus": 0.74,
-            # "macheteros": 0.69,
-            # "pujllay": 0.95
+            # "atiku": 0.52,
+            # "jula": 0.72,
+            # "kantus": 0.34,
+            # "macheteros": 0.53,
+            # "pujllay": 0.93
+            "atiku": 0.18,
+            "jula": 0.95,
+            "kantus": 0.33,
+            "macheteros": 0.9,
+            "pujllay": 0.95
         }
 
         labels = list(optimal_thresholds2.keys())
@@ -136,9 +168,15 @@ async def predict_audio(file: UploadFile = File(...), db: Session = Depends(get_
         # Predicción con umbrales
         candidatos = [labels[i] for i, s in enumerate(y_score[0]) if s >= optimal_thresholds2[labels[i]]]
         if candidatos:
+
+            scores_candidatos = [y_score[0][labels.index(c)] for c in candidatos]
             prediccion = candidatos[np.argmax([y_score[0][labels.index(c)] for c in candidatos])]
+            porcentaje_prediccion = float(np.max(scores_candidatos))  # <-- porcentaje como float 0-1
+
             resultado = get_by_nombre_prediccion(db, prediccion)
+            
             if resultado:
+                resultado.porcentaje = porcentaje_prediccion * 100.0  # Convertir a porcentaje 0-100
                 return resultado  #FastAPI lo convierte automáticamente a JSON
             else:
                 raise HTTPException(status_code=404, detail="Género no visto")
@@ -149,7 +187,11 @@ async def predict_audio(file: UploadFile = File(...), db: Session = Depends(get_
         raise HTTPException(status_code=500, detail=str(e))
     
     finally:
-        os.remove(tmp_path)
+        # Limpiar archivos temporales
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        if os.path.exists(processed_path):
+            os.remove(processed_path)
 
 @app.post("/predict")
 def predecir(audio: AudioFeatures):
@@ -169,8 +211,14 @@ def predecir(audio: AudioFeatures):
 
 @app.get("/imagen/{image_name}")
 async def get_image(image_name: str):
-    return FileResponse("static/"+image_name, media_type="image/png")
-
+    try:
+        # Verificar si el archivo existe
+        file_path = os.path.join("static", image_name)
+        if not os.path.isfile(file_path):
+            raise HTTPException(status_code=404, detail="Imagen no encontrada")
+        return FileResponse("static/"+image_name, media_type="image")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 # definicion de una ruta raiz
 @app.get("/")
 def read_root():
@@ -194,5 +242,23 @@ def obtener_genero(genero_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Género no encontrado")
     return genero
 
+@app.get("/generos/{genero_id}/caracteristicas", response_model=list[CaracteristicasCulturalesOut])
+def read_caracteristicas(genero_id: int, db: Session = Depends(get_db)):
+    caracteristicas = get_caracteristicas_by_genero(db, genero_id)
+    if not caracteristicas:
+        raise HTTPException(status_code=404, detail="No se encontraron características para este género")
+    return caracteristicas
 
+@app.get("/generos/{genero_id}/instrumentos", response_model=list[InstrumentosOut])
+def read_caracteristicas(genero_id: int, db: Session = Depends(get_db)):
+    instrumentos = get_instrumentos_by_genero(db, genero_id)
+    if not instrumentos:
+        raise HTTPException(status_code=404, detail="No se encontraron instrumentos musicales para este género")
+    return instrumentos
 
+@app.get("/generos/{genero_id}/ubicaciones", response_model=list[OrigenesGeograficosOut])
+def read_caracteristicas(genero_id: int, db: Session = Depends(get_db)):
+    ubicaciones = get_origenes_by_genero(db, genero_id)
+    if not ubicaciones:
+        raise HTTPException(status_code=404, detail="No se encontraron ubicaciones para este género")
+    return ubicaciones

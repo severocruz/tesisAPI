@@ -1,6 +1,9 @@
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from datetime import datetime
+from typing import List, Optional
+
+from schemas.caracteristicasculturales import CaracteristicasCulturalesOut
 
 class GenerosMusicalesBase(BaseModel):
     nombre: str
@@ -8,6 +11,7 @@ class GenerosMusicalesBase(BaseModel):
     descripcion: str
     imagen: str
     video_link: str
+    porcentaje: float
     created_at: datetime
     updated_at: datetime
 

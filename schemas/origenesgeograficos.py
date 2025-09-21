@@ -1,15 +1,16 @@
 from pydantic import BaseModel
 from pydantic import ConfigDict
+from datetime import datetime
 
 class OrigenesGeograficosBase(BaseModel):
     nombre: str
     descripcion: str
-    latitud: str
-    longitud: str
+    latitud: float
+    longitud: float
     imagen: str
     id_genero: int
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 class OrigenesGeograficosCreate(OrigenesGeograficosBase):
     pass
@@ -17,4 +18,4 @@ class OrigenesGeograficosCreate(OrigenesGeograficosBase):
 class OrigenesGeograficosOut(OrigenesGeograficosBase):
     id: int
 
-model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)
