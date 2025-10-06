@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Clasificación de Música</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="card">
+        <div class="card-content">
+            <h1 class="title"> Clasificación de Música Autóctona</h1>
+            <p class="description">Arrastra un archivo WAV aquí o haz clic para seleccionarlo.</p>
+
+            <div id="dropZone" class="drop-zone">
+                
+                <p id="dropText">Arrastra tu archivo aquí</p>
+                <input type="file" id="audioFile" accept=".wav" hidden>
+            </div>
+
+            <button id="uploadBtn" class="btn">Subir y predecir</button>
+        </div>
+    </div>
+    <div id="loader" class="loader" style="display:none;"></div>
+
+    <div id="resultadoContainer"></div>
+
+    <script src="/static/js/result.js"></script>
+</body>
+</html>

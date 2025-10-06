@@ -28,6 +28,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import noisereduce as nr
 import soundfile as sf
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 
 import pydub
@@ -65,6 +68,8 @@ def get_db():
 # creacion de una app de FastAPI
 app = FastAPI(title="API de reconocimiento de generos musicales autoctonos")
 
+# Aquí sí usas Jinja2Templates, ya no da warning
+templates = Jinja2Templates(directory="templates")
 # Montar carpeta "static"
 app.mount("/static", StaticFiles(directory="static"), name="static")
 # Definir esquema de entrada (features preprocesadas)
@@ -145,8 +150,8 @@ async def predict_audio(file: UploadFile = File(...), db: Session = Depends(get_
         # Normalizar y procesar el audio
         process_audio(tmp_path, processed_path)
         # Extraer features reducidas
-        X_new = extraer_8_features(tmp_path).reshape(1, -1)  # 1 muestra
-        # X_new = extraer_8_features(processed_path).reshape(1, -1)
+        # X_new = extraer_8_features(tmp_path).reshape(1, -1)  # 1 muestra
+        X_new = extraer_8_features(processed_path).reshape(1, -1)
         # Probabilidades
         y_score = clf.predict_proba(X_new)
         
@@ -156,11 +161,11 @@ async def predict_audio(file: UploadFile = File(...), db: Session = Depends(get_
             # "kantus": 0.34,
             # "macheteros": 0.53,
             # "pujllay": 0.93
-            "atiku": 0.18,
-            "jula": 0.95,
-            "kantus": 0.33,
-            "macheteros": 0.9,
-            "pujllay": 0.95
+            "atiku": 0.22,
+            "jula": 0.17,
+            "kantus": 0.24,
+            "macheteros": 0.43,
+            "pujllay": 0.13
         }
 
         labels = list(optimal_thresholds2.keys())
@@ -220,9 +225,13 @@ async def get_image(image_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 # definicion de una ruta raiz
-@app.get("/")
-def read_root():
-    return {"Hello": "Worldcito"}
+# @app.get("/")
+# def read_root():
+#     return {"Hello": "Worldcito"}
+
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 # definicion de una ruta con un parametro
 @app.get("/items/{item_id}")
@@ -242,6 +251,16 @@ def obtener_genero(genero_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Género no encontrado")
     return genero
 
+# Endpoint para obtener un género por nombre
+@app.get("/genero/{name}", response_model=GenerosMusicalesOut)
+def obtener_genero_by_name(name: str, db: Session = Depends(get_db)):
+    genero =  get_by_nombre_prediccion(db, name) 
+    if not genero:
+        raise HTTPException(status_code=404, detail="Género no encontrado")
+    return genero
+
+
+#obtener caracteristicas culturales, instrumentos y origenes geograficos por genero
 @app.get("/generos/{genero_id}/caracteristicas", response_model=list[CaracteristicasCulturalesOut])
 def read_caracteristicas(genero_id: int, db: Session = Depends(get_db)):
     caracteristicas = get_caracteristicas_by_genero(db, genero_id)
