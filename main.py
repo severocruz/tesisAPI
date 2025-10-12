@@ -89,8 +89,8 @@ def extraer_8_features(wav_path):
     features_mean = np.mean(features, axis=1)
     
     # Tomar solo las primeras 8 características
-    return features_mean[:8]
-
+    # return features_mean[:8]
+    return features_mean[:21]  # Cambiado a 21 para incluir más características
 from pydub import AudioSegment, effects
 from pydub.silence import detect_nonsilent
 
@@ -150,8 +150,8 @@ async def predict_audio(file: UploadFile = File(...), db: Session = Depends(get_
         # Normalizar y procesar el audio
         process_audio(tmp_path, processed_path)
         # Extraer features reducidas
-        # X_new = extraer_8_features(tmp_path).reshape(1, -1)  # 1 muestra
-        X_new = extraer_8_features(processed_path).reshape(1, -1)
+        X_new = extraer_8_features(tmp_path).reshape(1, -1)  # 1 muestra
+        # X_new = extraer_8_features(processed_path).reshape(1, -1)
         # Probabilidades
         y_score = clf.predict_proba(X_new)
         
@@ -161,17 +161,18 @@ async def predict_audio(file: UploadFile = File(...), db: Session = Depends(get_
             # "kantus": 0.34,
             # "macheteros": 0.53,
             # "pujllay": 0.93
-            "atiku": 0.22,
-            "jula": 0.17,
-            "kantus": 0.24,
-            "macheteros": 0.43,
-            "pujllay": 0.13
+            "atiku": 0.21,
+            "jula": 0.51,
+            "kantus": 0.85,
+            "macheteros": 0.75,
+            "pujllay": 0.10
         }
 
-        labels = list(optimal_thresholds2.keys())
+        labels = list(optimal_thresholds.keys())
+        # labels = list(optimal_thresholds.keys()) # Usar las etiquetas del modelo cargado
 
         # Predicción con umbrales
-        candidatos = [labels[i] for i, s in enumerate(y_score[0]) if s >= optimal_thresholds2[labels[i]]]
+        candidatos = [labels[i] for i, s in enumerate(y_score[0]) if s >= optimal_thresholds[labels[i]]]
         if candidatos:
 
             scores_candidatos = [y_score[0][labels.index(c)] for c in candidatos]

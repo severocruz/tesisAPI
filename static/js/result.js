@@ -52,7 +52,10 @@ async function uploadAudio() {
             body: formData
         });
         const data = await res.json();
+        
         renderResultCard(data);
+        // console.log('data', data)
+        mostrarDatosGenero(data); // Cargar características e instrumentos del género predicho  
     } catch (err) {
         alert("Error al procesar el archivo.");
         console.error(err);
@@ -65,6 +68,7 @@ async function uploadAudio() {
 }
 
 function renderResultCard(data) {
+    // console.log('data', data);
     const container = document.getElementById("resultadoContainer");
     container.innerHTML = `
         <div class="card fade-in">
@@ -88,3 +92,69 @@ function renderResultCard(data) {
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
+const API_BASE = "http://127.0.0.1:8080"; // tu base URL
+
+async function cargarCaracteristicas(generoId) {
+  const contenedor = document.getElementById("caracteristicas-container");
+  contenedor.innerHTML = "<p>Cargando características...</p>";
+
+  try {
+    const resp = await fetch(`/generos/${generoId}/caracteristicas`);
+    if (!resp.ok) throw new Error("Error al obtener características");
+    const data = await resp.json();
+
+    contenedor.innerHTML = "";
+    data.forEach(item => {
+      const card = document.createElement("div");
+      card.classList.add("card2");
+      card.innerHTML = `
+        <img src="/static/${item.imagen}" alt="${item.nombre}">
+        <div class="card-content">
+          <h3>${item.nombre}</h3>
+          <p>${item.descripcion}</p>
+        </div>
+      `;
+      contenedor.appendChild(card);
+    });
+  } catch (err) {
+    contenedor.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+  }
+}
+
+async function cargarInstrumentos(generoId) {
+  const contenedor = document.getElementById("instrumentos-container");
+  contenedor.innerHTML = "<p>Cargando instrumentos...</p>";
+
+  try {
+    const resp = await fetch(`/generos/${generoId}/instrumentos`);
+    if (!resp.ok) throw new Error("Error al obtener instrumentos");
+    const data = await resp.json();
+
+    contenedor.innerHTML = "";
+    data.forEach(item => {
+      const card = document.createElement("div");
+      card.classList.add("card2");
+      card.innerHTML = `
+        <img src="static/${item.imagen}" alt="${item.nombre}">
+        <div class="card-content">
+          <h3>${item.nombre}</h3>
+          <p>${item.tipo}</p>
+          <p>${item.descripcion}</p>
+        </div>
+      `;
+      contenedor.appendChild(card);
+    });
+  } catch (err) {
+    contenedor.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+  }
+}
+
+// ejemplo: llama estas funciones cuando tengas el id del género
+// por ejemplo, tras la predicción:
+function mostrarDatosGenero(prediccion) {
+  const generoId = prediccion.id || 1; // ejemplo
+  cargarCaracteristicas(generoId);
+  cargarInstrumentos(generoId);
+}
+

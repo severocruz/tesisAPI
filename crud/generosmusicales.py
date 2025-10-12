@@ -10,10 +10,10 @@ def get_by_id(db: Session, id: int) -> GenerosMusicalesOut | None:
     return db.query(GenerosMusicales).filter(GenerosMusicales.id == id).first()
 
 def get_by_nombre_prediccion(db: Session, nombre: str) -> GenerosMusicalesOut | None:
-    return db.query(GenerosMusicales).filter(GenerosMusicales.nombre == nombre).first()
+    return db.query(GenerosMusicales).filter(GenerosMusicales.nombre_prediccion == nombre).first()
 
 def get_by_nombre(db: Session, nombre: str) -> GenerosMusicalesOut | None:
-    return db.query(GenerosMusicales).filter(GenerosMusicales.nombre == nombre).first()
+    return db.query(GenerosMusicales).filter(GenerosMusicales.nombre_prediccion == nombre).first()
 
 
 def create(db: Session, item: GenerosMusicalesCreate) -> GenerosMusicalesOut:
