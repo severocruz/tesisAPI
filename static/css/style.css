@@ -224,3 +224,47 @@ body {
   font-size: 0.9rem;
   color: #666;
 }
+
+.cabecera {
+      position: relative;
+      height: 200px;
+      background-image: url('../cabecera.png');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      font-family: 'Andika New Basic', sans-serif;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background-color: rgba(253, 253, 253, 0.78);
+    }
+
+    .contenido {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 25px;
+      padding: 0 40px;
+    }
+
+    .escudo {
+      width: 150px;
+      height: auto;
+      filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.6));
+    }
+
+    .titulo {
+      font-size: 1.8rem;
+      font-weight: 700;
+      max-width: 800px;
+      line-height: 1.4;
+      text-shadow: 2px 2px 6px rgba(250, 248, 248, 0.95);
+      background-color: rgba(255, 255, 255, 0.4);
+    }

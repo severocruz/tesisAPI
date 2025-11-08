@@ -57,8 +57,9 @@ async function uploadAudio() {
         // console.log('data', data)
         mostrarDatosGenero(data); // Cargar características e instrumentos del género predicho  
     } catch (err) {
-        alert("Error al procesar el archivo.");
-        console.error(err);
+        // alert("Error al procesar el archivo.");
+        renderErrorCard()
+        // console.error(err);
     } finally {
         // Ocultar loader y reactivar botón
         loader.style.display = "none";
@@ -87,6 +88,30 @@ function renderResultCard(data) {
             </div>
         </div>
     `;
+    // Scroll hacia la card
+    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function renderErrorCard() {
+    // console.log('data', data);
+    const container = document.getElementById("resultadoContainer");
+    container.innerHTML = `
+        <div class="card fade-in">
+            <div class="image-container">
+                <img src="/static/advertencia.png">
+            </div>
+            <div class="card-content">
+            <h2 class="subtitle">Predicción: Sin Predicción</h2>
+            <h1 class="title">Desconocido</h1>
+                <p class="description">No se reconoce el género o no esta incluido en el dataset</p>
+                
+            </div>
+        </div>
+    `;
+    const contenedor = document.getElementById("caracteristicas-container");
+    contenedor.innerHTML = "<p>Sin datos</p>";
+    const contenedor2 = document.getElementById("instrumentos-container");
+    contenedor2.innerHTML = "<p>Sin datos</p>";
 }
 
 function capitalize(str) {

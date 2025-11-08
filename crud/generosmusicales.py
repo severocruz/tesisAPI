@@ -13,7 +13,7 @@ def get_by_nombre_prediccion(db: Session, nombre: str) -> GenerosMusicalesOut | 
     return db.query(GenerosMusicales).filter(GenerosMusicales.nombre_prediccion == nombre).first()
 
 def get_by_nombre(db: Session, nombre: str) -> GenerosMusicalesOut | None:
-    return db.query(GenerosMusicales).filter(GenerosMusicales.nombre_prediccion == nombre).first()
+    return db.query(GenerosMusicales).filter(GenerosMusicales.nombre == nombre).first()
 
 
 def create(db: Session, item: GenerosMusicalesCreate) -> GenerosMusicalesOut:
